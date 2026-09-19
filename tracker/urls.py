@@ -7,5 +7,7 @@ urlpatterns = [
    path('add/', views.add_assignment, name='add'),
    path('add/<str:due_date>/', views.add_assignment_with_date, name='add_with_date'),
    path('edit/<int:id>/', views.edit_assignment, name='edit'),
+   path('toggle/<int:id>/', views.toggle_complete, name='toggle'),
+   path('delete/<int:id>/', views.delete_assignment, name='delete'),
    path('export/', views.export_calendar, name='export_ics'),
 ]

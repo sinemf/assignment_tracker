@@ -266,4 +266,48 @@ body {
     margin-bottom: 1rem;
     font-family: 'VT323', monospace;
  }
+
+
+ .assignment.completed {
+    background-color: #dfeadf;
+ }
+
+
+ .assignment.completed a {
+    text-decoration: line-through;
+    opacity: 0.7;
+ }
+
+
+ .toggle-form {
+    display: inline;
+ }
+
+
+ .toggle-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    margin-right: 0.2rem;
+    vertical-align: middle;
+ }
+
+
+ .delete-button {
+    background-color: #e8a6a6 !important;
+ }
+
+
+ .delete-button:hover {
+    background-color: #d98f8f !important;
+ }
+
+
+ @media print {
+    .toggle-button {
+        display: none !important;
+    }
+ }
  

@@ -43,7 +43,11 @@
                    <strong>{{ day.day.day }}</strong>
                    <a href="{% url 'add_with_date' day.day %}" class="add-button">+</a>
                    {% for assignment in day.assignments %}
-                       <div class="assignment {% if not assignment.completed and assignment.due_date <= today %}past-due{% endif %}">
+                       <div class="assignment {% if assignment.completed %}completed{% elif assignment.due_date <= today %}past-due{% endif %}">
+                           <form method="post" action="{% url 'toggle' assignment.id %}" class="toggle-form">
+                               {% csrf_token %}
+                               <button type="submit" class="toggle-button" title="{% if assignment.completed %}Mark as not done{% else %}Mark as done{% endif %}">{% if assignment.completed %}✅{% else %}⬜{% endif %}</button>
+                           </form>
                            <a href="{% url 'edit' assignment.id %}">{{ assignment.title }}</a>
                        </div>
                    {% endfor %}

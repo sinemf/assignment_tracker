@@ -1,7 +1,8 @@
-from datetime import date, timedelta, datetime, time
+from datetime import date, timedelta, datetime
 from calendar import Calendar, monthrange
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.views.decorators.http import require_POST
 from icalendar import Calendar as iCalendar, Event
 from django.utils.timezone import now as django_now
 from zoneinfo import ZoneInfo
@@ -13,14 +14,20 @@ from .forms import AssignmentForm
 
 def dashboard(request):
    tz_name = request.COOKIES.get('user_timezone', 'UTC')
-   tz = ZoneInfo(tz_name)
+   try:
+       tz = ZoneInfo(tz_name)
+   except (KeyError, ValueError):
+       tz = ZoneInfo('UTC')
    now = django_now().astimezone(tz)
    today = now.date()
 
 
    # Get selected month and year from query params, or default to current
-   year = int(request.GET.get('year', today.year))
-   month = int(request.GET.get('month', today.month))
+   try:
+       year = int(request.GET.get('year', today.year))
+       month = int(request.GET.get('month', today.month))
+   except (TypeError, ValueError):
+       year, month = today.year, today.month
 
 
    if month > 12:
@@ -31,27 +38,30 @@ def dashboard(request):
        year -= 1
 
 
+   start_of_month = date(year, month, 1)
+   end_of_month = date(year, month, monthrange(year, month)[1])
+
+
+   # One query for the whole month, grouped by day (avoids a query per calendar cell)
+   month_assignments = Assignment.objects.filter(due_date__range=(start_of_month, end_of_month))
+   assignments_by_day = {}
+   for assignment in month_assignments:
+       assignments_by_day.setdefault(assignment.due_date, []).append(assignment)
+
+
    cal = Calendar(firstweekday=0)
-   month_days = cal.monthdatescalendar(year, month)
-
-
    calendar_weeks = []
-   for week in month_days:
+   for week in cal.monthdatescalendar(year, month):
        week_data = []
        for day in week:
            if day.month == month:
-               assignments = Assignment.objects.filter(due_date=day)
                week_data.append({
                    'day': day,
-                   'assignments': assignments,
+                   'assignments': assignments_by_day.get(day, []),
                })
            else:
                week_data.append(None)
        calendar_weeks.append(week_data)
-
-
-   start_of_month = date(year, month, 1)
-   end_of_month = date(year, month, monthrange(year, month)[1])
 
 
    def get_progress(qs):
@@ -60,17 +70,10 @@ def dashboard(request):
        return (done / total * 100) if total > 0 else 0
 
 
-   month_assignments = Assignment.objects.filter(due_date__range=(start_of_month, end_of_month))
-
-
    start_of_week = today - timedelta(days=today.weekday())
    end_of_week = start_of_week + timedelta(days=6)
    week_assignments = Assignment.objects.filter(due_date__range=(start_of_week, end_of_week))
-
-
-   start_of_day = datetime.combine(today, time.min)
-   end_of_day = datetime.combine(today, time.max)
-   day_assignments = Assignment.objects.filter(due_date__range=(start_of_day.date(), end_of_day.date()))
+   day_assignments = Assignment.objects.filter(due_date=today)
 
 
    context = {
@@ -128,7 +131,7 @@ def add_assignment_with_date(request, due_date):
 
 
 def edit_assignment(request, id):
-   assignment = Assignment.objects.get(id=id)
+   assignment = get_object_or_404(Assignment, id=id)
    if request.method == 'POST':
        form = AssignmentForm(request.POST, instance=assignment)
        if form.is_valid():
@@ -143,6 +146,25 @@ def edit_assignment(request, id):
 
 
 
+@require_POST
+def toggle_complete(request, id):
+   assignment = get_object_or_404(Assignment, id=id)
+   assignment.completed = not assignment.completed
+   assignment.save()
+   return redirect('dashboard')
+
+
+
+
+@require_POST
+def delete_assignment(request, id):
+   assignment = get_object_or_404(Assignment, id=id)
+   assignment.delete()
+   return redirect('dashboard')
+
+
+
+
 def export_calendar(request):
    cal = iCalendar()
    cal.add('prodid', '-//Assignment Tracker//')
@@ -152,11 +174,11 @@ def export_calendar(request):
    assignments = Assignment.objects.all()
    for assignment in assignments:
        event = Event()
-       event.add('summary', assignment.title)
+       event.add('summary', f"{assignment.course}: {assignment.title}" if assignment.course else assignment.title)
        event.add('description', assignment.description or "")
        event.add('dtstart', assignment.due_date)
        event.add('dtend', assignment.due_date)
-       event.add('dtstamp', datetime.now())
+       event.add('dtstamp', django_now())
        cal.add_component(event)
 
 
