@@ -65,7 +65,12 @@ class AssignmentActionTests(TestCase):
        response = self.client.get(reverse("toggle", args=[self.assignment.id]))
        self.assertEqual(response.status_code, 405)
 
-   def test_delete_removes_assignment(self):
+   def test_delete_get_shows_confirmation_page(self):
+       response = self.client.get(reverse("delete", args=[self.assignment.id]))
+       self.assertEqual(response.status_code, 200)
+       self.assertTrue(Assignment.objects.filter(id=self.assignment.id).exists())
+
+   def test_delete_post_removes_assignment(self):
        self.client.post(reverse("delete", args=[self.assignment.id]))
        self.assertFalse(Assignment.objects.filter(id=self.assignment.id).exists())
 

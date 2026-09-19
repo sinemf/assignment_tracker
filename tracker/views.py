@@ -11,7 +11,6 @@ from .forms import AssignmentForm
 
 
 
-
 def dashboard(request):
    tz_name = request.COOKIES.get('user_timezone', 'UTC')
    try:
@@ -156,11 +155,12 @@ def toggle_complete(request, id):
 
 
 
-@require_POST
 def delete_assignment(request, id):
    assignment = get_object_or_404(Assignment, id=id)
-   assignment.delete()
-   return redirect('dashboard')
+   if request.method == 'POST':
+       assignment.delete()
+       return redirect('dashboard')
+   return render(request, 'delete_assignment.html', {'assignment': assignment})
 
 
 

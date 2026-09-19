@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: assignment-tracker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn assignment_tracker.wsgi:application
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: assignment_tracker.settings
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: DISABLE_COLLECTSTATIC
+        value: 0
+    staticPublishPath: staticfiles

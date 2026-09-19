@@ -102,11 +102,7 @@
            {{ form.as_p }}
            <button type="submit">Update</button>
        </form>
-       <form method="post" action="{% url 'delete' assignment.id %}"
-             onsubmit="return confirm('Delete this assignment?');">
-           {% csrf_token %}
-           <button type="submit" class="delete-button">🗑️ Delete</button>
-       </form>
+       <a href="{% url 'delete' assignment.id %}" class="back-link">🗑️ Delete this assignment</a>
        <a href="{% url 'dashboard' %}" class="back-link">← Back to Dashboard</a>
    </div>
 </body>
